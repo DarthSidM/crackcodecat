@@ -7,13 +7,14 @@ export const instance = new Razorpay({key_id : process.env.NEXT_PUBLIC_RAZORPAY_
 
 
 export async function POST(req : NextRequest){
-    const {amount} = await req.json();
-    
+    const {amount, userId, courseId} = await req.json();
+    const receipt = `course_${courseId || 'cat_full'}_${Date.now()}`;
     const order = await instance.orders.create({
         amount: amount, // Amount in paise
         currency: "INR",
-        receipt: "receipt#1",
+        receipt,
         payment_capture: true, // Auto capture
+        notes: { userId: userId || '', courseId: courseId || 'cat_full' }
     })  
 
     console.log("order",order);

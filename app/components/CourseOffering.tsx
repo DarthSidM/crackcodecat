@@ -42,10 +42,10 @@ export function CourseOffering() {
   return (
     <Box component="section" py={64} style={{ background: '#f8faff' }}>
       <Container size="lg">
-        <Title order={2} size={36} fw={900} mb={32} ta="center" style={{ color: '#003366', letterSpacing: -1 }}>
+        <Title order={2} size={36} fw={900} mb={32} ta="center" style={{ color: '#003366', letterSpacing: -1, fontSize: 'clamp(22px, 5.5vw, 36px)' }}>
           Program Features
         </Title>
-        <SimpleGrid cols={4} spacing={24}> 
+        <SimpleGrid cols={{ base: 1, sm: 2, md: 3, lg: 4 }} spacing={24}> 
           {features.map((f, i) => (
             <Paper key={i} shadow="md" radius={16} p={28} style={{ background: '#fff', border: '1.5px solid #e3e8f0', minHeight: 160, display: 'flex', flexDirection: 'column', justifyContent: 'center', transition: 'box-shadow 0.2s', cursor: 'pointer' }}
               withBorder

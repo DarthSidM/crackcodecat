@@ -3,39 +3,30 @@ import { useState } from 'react';
 import {
   Box, Container, Paper, Title, Text, TextInput, Button, Group, Anchor, Divider, Stack, Badge, Checkbox, Alert
 } from '@mantine/core';
-import { IconMail, IconLock, IconUser, IconBolt, IconShieldCheck, IconCheck, IconPhone } from '@tabler/icons-react';
+import { IconMail, IconUser, IconBolt, IconShieldCheck, IconCheck, IconPhone } from '@tabler/icons-react';
+import { useRouter } from 'next/navigation';
 
 function mockDelay(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 
 export default function SignUpPage() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [agree, setAgree] = useState(false);
-  const [otpRequested, setOtpRequested] = useState(false);
-  const [otp, setOtp] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   const canRequestOtp = email.trim().length > 5 && name.trim().length > 1 && phone.trim().length >= 8 && agree;
-  const canSubmitOtp = otpRequested && otp.trim().length >= 4;
 
-  async function handleRequestOtp() {
+  async function handleSendOtp() {
     if (!canRequestOtp) return;
     setSubmitting(true);
     setMessage(null);
-    await mockDelay(800);
-    setOtpRequested(true);
+    await mockDelay(600);
     setSubmitting(false);
-    setMessage('OTP sent to your email. (Demo)');
-  }
-
-  async function handleVerify() {
-    if (!canSubmitOtp) return;
-    setSubmitting(true);
-    await mockDelay(900);
-    setSubmitting(false);
-    setMessage('Account created & signed in. (Demo)');
+    // Redirect to verification page with email in query
+    router.push(`/auth/verify?email=${encodeURIComponent(email)}`);
   }
 
   return (
@@ -60,7 +51,7 @@ export default function SignUpPage() {
               Start Cracking CAT
             </Title>
             <Text c="var(--mantine-color-gray-3)" mt={4}>
-              Join the sprint – class links emailed within 24h after payment.
+              We will email you a verification code to complete signup.
             </Text>
           </div>
           <Paper radius="lg" p="xl" withBorder shadow="md" style={{
@@ -105,63 +96,24 @@ export default function SignUpPage() {
                 required
                 styles={{ input: { color: '#fff', backgroundColor: 'rgba(255,255,255,0.08)' }, label: { color: '#fff' } }}
               />
-              {!otpRequested && (
-                <Button
-                  size="md"
-                  radius="md"
-                  disabled={!canRequestOtp || submitting}
-                  onClick={handleRequestOtp}
-                  variant="gradient"
-                  gradient={{ from: '#0066FF', to: '#003366' }}
-                  leftSection={<IconShieldCheck size={18} />}
-                  styles={{ root: { fontWeight: 700, letterSpacing: 0.5 } }}
-                >
-                  Send OTP & Create Account
-                </Button>
-              )}
-              {otpRequested && (
-                <>
-                  <TextInput
-                    label="OTP"
-                    placeholder="Enter 6-digit code"
-                    value={otp}
-                    onChange={e => setOtp(e.currentTarget.value)}
-                    leftSection={<IconLock size={18} />}
-                    radius="md"
-                    required
-                    styles={{ input: { color: '#fff', backgroundColor: 'rgba(255,255,255,0.08)' }, label: { color: '#fff' } }}
-                  />
-                  <Group grow>
-                    <Button
-                      variant="subtle"
-                      color="gray"
-                      disabled={submitting}
-                      onClick={() => { setOtp(''); setOtpRequested(false); setMessage(null); }}
-                    >
-                      Change Details
-                    </Button>
-                    <Button
-                      size="md"
-                      radius="md"
-                      disabled={!canSubmitOtp || submitting}
-                      onClick={handleVerify}
-                      variant="gradient"
-                      gradient={{ from: '#FFC700', to: '#FFDE55' }}
-                      styles={{ root: { fontWeight: 700, color: '#0B2C64' } }}
-                    >
-                      Finish Signup
-                    </Button>
-                  </Group>
-                </>
-              )}
-              {!otpRequested && (
-                <Checkbox
-                  label={<Text size="xs" c="var(--mantine-color-gray-4)">I agree to Terms & Privacy Policy</Text>}
-                  checked={agree}
-                  onChange={e => setAgree(e.currentTarget.checked)}
-                  styles={{ label: { cursor: 'pointer' } }}
-                />
-              )}
+              <Button
+                size="md"
+                radius="md"
+                disabled={!canRequestOtp || submitting}
+                onClick={handleSendOtp}
+                variant="gradient"
+                gradient={{ from: '#0066FF', to: '#003366' }}
+                leftSection={<IconShieldCheck size={18} />}
+                styles={{ root: { fontWeight: 700, letterSpacing: 0.5 } }}
+              >
+                Send OTP & Continue
+              </Button>
+              <Checkbox
+                label={<Text size="xs" c="var(--mantine-color-gray-4)">I agree to Terms & Privacy Policy</Text>}
+                checked={agree}
+                onChange={e => setAgree(e.currentTarget.checked)}
+                styles={{ label: { cursor: 'pointer' } }}
+              />
               <Divider my="sm" labelPosition="center" label={<Text size="xs" c="dimmed">Have an account?</Text>} />
               <Group justify="center">
                 <Anchor
@@ -176,7 +128,7 @@ export default function SignUpPage() {
             </Stack>
           </Paper>
           <Text size="xs" c="var(--mantine-color-gray-4)" ta="center">
-            Secure OTP signup – quick phone based sign in afterwards. GST invoices auto-issued post payment.
+            Email OTP for signup – phone-only quick sign in afterwards. GST invoices auto-issued post payment.
           </Text>
         </Stack>
       </Container>

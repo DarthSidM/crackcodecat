@@ -22,10 +22,12 @@ import {
   Indicator,
   SegmentedControl,
   Tooltip,
-  rem
+  rem,
+  em
 } from '@mantine/core';
 import { AreaChart } from '@mantine/charts';
 import { IconUsers, IconCurrencyRupee, IconBook, IconChartLine, IconGrowth, IconSearch, IconFilter, IconDownload, IconCalendarTime, IconAlertTriangle, IconChecks, IconInbox } from '@tabler/icons-react';
+import { useMediaQuery } from '@mantine/hooks';
 
 // ------------------ Mock Data (would come from backend) ------------------ //
 interface CourseInfo { id: string; name: string; price: number; active: boolean; startDate: string; students: number; whatsappLink: string; };
@@ -77,6 +79,7 @@ export default function ManagerDashboard() {
   const [courseFilter, setCourseFilter] = useState<string | null>(null);
   const [view, setView] = useState<'students' | 'courses'>('students');
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
+  const isMobile = useMediaQuery(`(max-width: ${em(750)})`);
 
   const filteredStudents = useMemo(() => STUDENTS.filter(s => {
     const matches = `${s.name} ${s.email} ${s.phone}`.toLowerCase().includes(search.toLowerCase());
@@ -172,6 +175,7 @@ export default function ManagerDashboard() {
                   onChange={(e) => setSearch(e.currentTarget.value)}
                   leftSection={<IconSearch size={16} />}
                   radius="md"
+                  w={{ base: '100%', sm: 300 }}
                 />
                 <Select
                   placeholder="Filter course"
@@ -180,43 +184,70 @@ export default function ManagerDashboard() {
                   onChange={(v) => setCourseFilter(v === 'all' ? null : v)}
                   radius="md"
                   leftSection={<IconFilter size={16} />}
+                  w={{ base: '100%', sm: 240 }}
                 />
-                <Button leftSection={<IconDownload size={16} />} variant="gradient" gradient={{ from: '#0066FF', to: '#003366' }} radius="md">Export</Button>
+                <Button leftSection={<IconDownload size={16} />} variant="gradient" gradient={{ from: '#0066FF', to: '#003366' }} radius="md" w={{ base: '100%', sm: 'auto' }}>Export</Button>
               </Group>
-              <ScrollArea h={360} offsetScrollbars>
-                <Table highlightOnHover withRowBorders={false} verticalSpacing="xs" fz="sm" className="dashboard-table">
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th style={{ color: '#fff' }}>Name</Table.Th>
-                      <Table.Th style={{ color: '#fff' }}>Email</Table.Th>
-                      <Table.Th style={{ color: '#fff' }}>Phone</Table.Th>
-                      <Table.Th style={{ color: '#fff' }}>Course</Table.Th>
-                      <Table.Th style={{ color: '#fff' }}>Status</Table.Th>
-                      <Table.Th style={{ color: '#fff' }}>Enrolled</Table.Th>
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {filteredStudents.map(s => {
-                      const course = COURSES.find(c => c.id === s.courseId)!;
-                      return (
-                        <Table.Tr key={s.id}>
-                          <Table.Td>
-                            <Group gap={6}>
-                              <Indicator color={statusColor[s.status]} size={10} />
-                              <Text fw={600} style={{ color: '#fff' }}>{s.name}</Text>
-                            </Group>
-                          </Table.Td>
-                          <Table.Td><Text c="var(--mantine-color-gray-3)" lineClamp={1}>{s.email}</Text></Table.Td>
-                          <Table.Td><Text c="var(--mantine-color-gray-3)">{s.phone}</Text></Table.Td>
-                          <Table.Td><Text size="xs" c="var(--mantine-color-gray-3)">{course.name}</Text></Table.Td>
-                          <Table.Td><Badge size="sm" color={statusColor[s.status]} variant="light" radius="sm">{s.status}</Badge></Table.Td>
-                          <Table.Td><Text size="xs" c="var(--mantine-color-gray-4)">{s.enrolledOn}</Text></Table.Td>
-                        </Table.Tr>
-                      );
-                    })}
-                  </Table.Tbody>
-                </Table>
-              </ScrollArea>
+
+              {isMobile ? (
+                <Stack gap="sm">
+                  {filteredStudents.map((s) => {
+                    const course = COURSES.find(c => c.id === s.courseId)!;
+                    return (
+                      <Paper key={s.id} withBorder radius="md" p="md" style={{ background: 'linear-gradient(150deg,rgba(255,255,255,0.06),rgba(255,255,255,0.015))' }}>
+                        <Group justify="space-between" align="flex-start">
+                          <Group gap={6}>
+                            <Indicator color={statusColor[s.status]} size={10} />
+                            <Text fw={600} style={{ color: '#fff' }}>{s.name}</Text>
+                          </Group>
+                          <Badge size="sm" color={statusColor[s.status]} variant="light" radius="sm">{s.status}</Badge>
+                        </Group>
+                        <Stack gap={2} mt={8}>
+                          <Text size="xs" c="var(--mantine-color-gray-3)">{s.email}</Text>
+                          <Text size="xs" c="var(--mantine-color-gray-3)">{s.phone}</Text>
+                          <Text size="xs" c="var(--mantine-color-gray-4)">Course: {course.name}</Text>
+                          <Text size="xs" c="var(--mantine-color-gray-4)">Enrolled: {s.enrolledOn}</Text>
+                        </Stack>
+                      </Paper>
+                    );
+                  })}
+                </Stack>
+              ) : (
+                <ScrollArea h={360} offsetScrollbars>
+                  <Table highlightOnHover withRowBorders={false} verticalSpacing="xs" fz="sm" className="dashboard-table">
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th style={{ color: '#fff' }}>Name</Table.Th>
+                        <Table.Th style={{ color: '#fff' }}>Email</Table.Th>
+                        <Table.Th style={{ color: '#fff' }}>Phone</Table.Th>
+                        <Table.Th style={{ color: '#fff' }}>Course</Table.Th>
+                        <Table.Th style={{ color: '#fff' }}>Status</Table.Th>
+                        <Table.Th style={{ color: '#fff' }}>Enrolled</Table.Th>
+                      </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {filteredStudents.map(s => {
+                        const course = COURSES.find(c => c.id === s.courseId)!;
+                        return (
+                          <Table.Tr key={s.id}>
+                            <Table.Td>
+                              <Group gap={6}>
+                                <Indicator color={statusColor[s.status]} size={10} />
+                                <Text fw={600} style={{ color: '#fff' }}>{s.name}</Text>
+                              </Group>
+                            </Table.Td>
+                            <Table.Td><Text c="var(--mantine-color-gray-3)" lineClamp={1}>{s.email}</Text></Table.Td>
+                            <Table.Td><Text c="var(--mantine-color-gray-3)">{s.phone}</Text></Table.Td>
+                            <Table.Td><Text size="xs" c="var(--mantine-color-gray-3)">{course.name}</Text></Table.Td>
+                            <Table.Td><Badge size="sm" color={statusColor[s.status]} variant="light" radius="sm">{s.status}</Badge></Table.Td>
+                            <Table.Td><Text size="xs" c="var(--mantine-color-gray-4)">{s.enrolledOn}</Text></Table.Td>
+                          </Table.Tr>
+                        );
+                      })}
+                    </Table.Tbody>
+                  </Table>
+                </ScrollArea>
+              )}
             </Paper>
           )}
 
@@ -247,38 +278,59 @@ export default function ManagerDashboard() {
                 </SimpleGrid>
               )}
               {selectedCourse && (
-                <Box>
-                  <Title order={4} size={18} mb="sm" style={{ color: '#fff' }}>Cohort Students</Title>
-                  <ScrollArea h={360} offsetScrollbars>
-                    <Table highlightOnHover withRowBorders={false} verticalSpacing="xs" fz="sm" className="dashboard-table">
-                      <Table.Thead>
-                        <Table.Tr>
-                          <Table.Th style={{ color: '#fff' }}>Name</Table.Th>
-                          <Table.Th style={{ color: '#fff' }}>Email</Table.Th>
-                          <Table.Th style={{ color: '#fff' }}>Phone</Table.Th>
-                          <Table.Th style={{ color: '#fff' }}>Status</Table.Th>
-                          <Table.Th style={{ color: '#fff' }}>Enrolled</Table.Th>
-                        </Table.Tr>
-                      </Table.Thead>
-                      <Table.Tbody>
-                        {STUDENTS.filter(s => s.courseId === selectedCourse).map(s => (
-                          <Table.Tr key={s.id}>
-                            <Table.Td>
-                              <Group gap={6}>
-                                <Indicator color={statusColor[s.status]} size={10} />
-                                <Text fw={600} style={{ color: '#fff' }}>{s.name}</Text>
-                              </Group>
-                            </Table.Td>
-                            <Table.Td><Text c="var(--mantine-color-gray-3)" lineClamp={1}>{s.email}</Text></Table.Td>
-                            <Table.Td><Text c="var(--mantine-color-gray-3)">{s.phone}</Text></Table.Td>
-                            <Table.Td><Badge size="sm" color={statusColor[s.status]} variant="light" radius="sm">{s.status}</Badge></Table.Td>
-                            <Table.Td><Text size="xs" c="var(--mantine-color-gray-4)">{s.enrolledOn}</Text></Table.Td>
+                isMobile ? (
+                  <Stack gap="sm">
+                    {STUDENTS.filter(s => s.courseId === selectedCourse).map((s) => (
+                      <Paper key={s.id} withBorder radius="md" p="md" style={{ background: 'linear-gradient(150deg,rgba(255,255,255,0.06),rgba(255,255,255,0.015))' }}>
+                        <Group justify="space-between" align="flex-start">
+                          <Group gap={6}>
+                            <Indicator color={statusColor[s.status]} size={10} />
+                            <Text fw={600} style={{ color: '#fff' }}>{s.name}</Text>
+                          </Group>
+                          <Badge size="sm" color={statusColor[s.status]} variant="light" radius="sm">{s.status}</Badge>
+                        </Group>
+                        <Stack gap={2} mt={8}>
+                          <Text size="xs" c="var(--mantine-color-gray-3)">{s.email}</Text>
+                          <Text size="xs" c="var(--mantine-color-gray-3)">{s.phone}</Text>
+                          <Text size="xs" c="var(--mantine-color-gray-4)">Enrolled: {s.enrolledOn}</Text>
+                        </Stack>
+                      </Paper>
+                    ))}
+                  </Stack>
+                ) : (
+                  <Box>
+                    <Title order={4} size={18} mb="sm" style={{ color: '#fff' }}>Cohort Students</Title>
+                    <ScrollArea h={360} offsetScrollbars>
+                      <Table highlightOnHover withRowBorders={false} verticalSpacing="xs" fz="sm" className="dashboard-table">
+                        <Table.Thead>
+                          <Table.Tr>
+                            <Table.Th style={{ color: '#fff' }}>Name</Table.Th>
+                            <Table.Th style={{ color: '#fff' }}>Email</Table.Th>
+                            <Table.Th style={{ color: '#fff' }}>Phone</Table.Th>
+                            <Table.Th style={{ color: '#fff' }}>Status</Table.Th>
+                            <Table.Th style={{ color: '#fff' }}>Enrolled</Table.Th>
                           </Table.Tr>
-                        ))}
-                      </Table.Tbody>
-                    </Table>
-                  </ScrollArea>
-                </Box>
+                        </Table.Thead>
+                        <Table.Tbody>
+                          {STUDENTS.filter(s => s.courseId === selectedCourse).map(s => (
+                            <Table.Tr key={s.id}>
+                              <Table.Td>
+                                <Group gap={6}>
+                                  <Indicator color={statusColor[s.status]} size={10} />
+                                  <Text fw={600} style={{ color: '#fff' }}>{s.name}</Text>
+                                </Group>
+                              </Table.Td>
+                              <Table.Td><Text c="var(--mantine-color-gray-3)" lineClamp={1}>{s.email}</Text></Table.Td>
+                              <Table.Td><Text c="var(--mantine-color-gray-3)">{s.phone}</Text></Table.Td>
+                              <Table.Td><Badge size="sm" color={statusColor[s.status]} variant="light" radius="sm">{s.status}</Badge></Table.Td>
+                              <Table.Td><Text size="xs" c="var(--mantine-color-gray-4)">{s.enrolledOn}</Text></Table.Td>
+                            </Table.Tr>
+                          ))}
+                        </Table.Tbody>
+                      </Table>
+                    </ScrollArea>
+                  </Box>
+                )
               )}
             </Paper>
           )}

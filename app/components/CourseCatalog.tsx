@@ -137,7 +137,7 @@ const COURSES: CourseCardProps[] = [
 
 export function CourseCatalog() {
   return (
-    <Box component="section" py={90} style={{
+    <Box component="section" py={{ base: 56, md: 90 }} style={{
       background: 'linear-gradient(180deg,#0A1633 0%,#0E1F46 60%,#123160 100%)',
       position: 'relative'
     }}>
@@ -151,17 +151,17 @@ export function CourseCatalog() {
             }}>
               Choose Your Path
             </Badge>
-            <Title order={2} size={48} fw={900} mt="md" style={{ color: '#fff', letterSpacing: -1 }}>
+            <Title order={2} size={48} fw={900} mt="md" style={{ color: '#fff', letterSpacing: -1, fontSize: 'clamp(22px, 6vw, 48px)' }}>
               Programs Built To Accelerate You
             </Title>
-            <Text size="lg" mt="sm" c="var(--mantine-color-gray-3)">
+            <Text size="lg" mt="sm" c="var(--mantine-color-gray-3)" style={{ fontSize: 'clamp(14px, 4.5vw, 18px)' }}>
               Pick a focused sprint or go all-in on a full turbo pathway. No fluff—pure outcome design.
             </Text>
           </Box>
 
           {/* Desktop Grid */}
           <Box visibleFrom="sm">
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing={32} mt={10}>
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing={{ base: 16, sm: 24, lg: 32 }} mt={10}>
               {COURSES.map(c => (
                 <CourseCard key={c.name} {...c} />
               ))}
@@ -173,7 +173,7 @@ export function CourseCatalog() {
             <Carousel
               withIndicators
               height="auto"
-              slideSize="88%"
+              slideSize="92%"
               slideGap="md"
               styles={{ indicator: { background: '#FFC700' } }}
             >
