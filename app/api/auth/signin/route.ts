@@ -48,12 +48,6 @@ export async function POST(req: NextRequest) {
             { expiresIn: JWT_EXPIRE } as jwt.SignOptions
         );
 
-        // Set cookie with phoneNumber and name (as a JSON string)
-        const cookieValue = JSON.stringify({
-            phoneNumber: user.phoneNumber,
-            name: user.name,
-        });
-
         const response = NextResponse.json({
             message: "Login successful!",
             success: true,
@@ -65,7 +59,7 @@ export async function POST(req: NextRequest) {
             },
         });
 
-        response.cookies.set("user", cookieValue, {
+        response.cookies.set("user", token, {
             httpOnly: false,
             secure: process.env.NODE_ENV === "production",
             maxAge: 7 * 24 * 60 * 60, // 7 days
