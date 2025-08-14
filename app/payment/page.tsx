@@ -1,13 +1,19 @@
 "use client"
 import axios from "axios";
 import Script from "next/script";
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, Stack, Text, Group, Button, Divider, Badge, TextInput, LoadingOverlay, ThemeIcon, rem } from '@mantine/core';
 import { IconShieldCheck, IconLock, IconArrowRight, IconCheck } from '@tabler/icons-react';
+import { Document } from "mongoose";
 
-// Price setup
-const TOTAL_PRICE = 7999; // Display / charged total (INR, GST inclusive)
-const GST_RATE = 0.18; // 18% total (9% + 9%)
+
+interface Course extends Document{
+  courseName: string;
+  courseDescription: string;
+  price: number;
+  cgst : number;
+  sgst : number;
+}
 
 export default function Payment(){
   const [loading, setLoading] = useState(false);
@@ -15,16 +21,37 @@ export default function Payment(){
   const [custName, setCustName] = useState('');
   const [custEmail, setCustEmail] = useState('');
   const [custPhone, setCustPhone] = useState('');
+  const [course,setCourse] = useState<Course>()
 
+  useEffect(() => {
+    const fetchCourse = async () => {
+      try {
+        const res = await axios.get("/api/manager/courses/");
+        // console.log(res.data);
+        
+        setCourse(res.data.courses[0]);
+      } catch (err) {
+        console.error("Failed to fetch course", err);
+        setError("Could not load course details. Please try again later.");
+      }
+    };
+  
+    fetchCourse();
+  }, []);
+  
+ 
   // Derive inclusive tax breakdown
   const breakdown = useMemo(() => {
-    const base = Math.round(TOTAL_PRICE / (1 + GST_RATE));
-    const totalTax = TOTAL_PRICE - base; // inclusive tax portion
-    // Split into equal halves; adjust rounding if needed
-    const cgst = Math.round(totalTax / 2);
-    const sgst = totalTax - cgst;
-    return { base, cgst, sgst, total: TOTAL_PRICE };
-  }, []);
+    if (!course) return { base: 0, cgst: 0, sgst: 0, total: 0 };
+    
+    return {
+      base: course.price,
+      cgst: course.price * course.cgst/100,
+      sgst: course.price * course.sgst/100,
+      total: course.price + course.price * course.cgst/100 + course.price * course.sgst/100
+    };
+  }, [course]);
+  
 
   const valid = custName.trim() && /\S+@\S+\.\S+/.test(custEmail) && /^\d{10}$/.test(custPhone);
 
@@ -33,10 +60,10 @@ export default function Payment(){
     setError(null);
     setLoading(true);
     try {
-      const orderRes = await axios.post("/api/create-order", { amount: TOTAL_PRICE * 100 }); // paise
+      const orderRes = await axios.post("/api/create-order", {course_Id : course?.id}); // paise
       const options: any = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "",
-        amount: TOTAL_PRICE * 100,
+        amount: 9000 * 100,
         currency: "INR",
         name: "CrackCAT Course",
         description: "Complete CAT Course Enrollment",

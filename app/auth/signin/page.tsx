@@ -1,7 +1,8 @@
 "use client";
 import { useState } from 'react';
 import {
-  Box, Container, Paper, Title, Text, TextInput, Button, Group, Anchor, Divider, Stack, Badge, Alert
+  Box, Container, Paper, Title, Text, TextInput, Button, Group, Anchor, Divider,
+   Stack, Badge, Alert ,PasswordInput
 } from '@mantine/core';
 import { IconBolt, IconCheck, IconPhone } from '@tabler/icons-react';
 
@@ -9,16 +10,22 @@ function mockDelay(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 
 export default function SignInPage() {
   const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const canSubmit = phone.trim().length >= 8;
+  const canSubmit = phone.trim().length >= 10;
 
   async function handleSignIn() {
     if (!canSubmit) return;
+    //Flawed logic, state updates are async , so this won't work and number will still contain prefixes
+    //just handle this while submitting the form rather than updating the state
+    if(phone.startsWith("+91") && phone.length == 13){setPhone(phone.slice(3))}
+    else if (phone.startsWith("0") && phone.length == 11){setPhone(phone.slice(1))}
     setSubmitting(true);
     setMessage(null);
     await mockDelay(700);
+    console.log("phone submitted is still",phone);
     setSubmitting(false);
     setMessage('Signed in successfully. (Demo)');
   }
@@ -62,7 +69,7 @@ export default function SignInPage() {
               )}
               <TextInput
                 label="Phone"
-                placeholder="e.g. +91 98765 43210"
+                placeholder="eg. 98765 43210"
                 value={phone}
                 onChange={e => setPhone(e.currentTarget.value)}
                 leftSection={<IconPhone size={18} />}
@@ -73,6 +80,17 @@ export default function SignInPage() {
                   label: { color: '#fff' }
                 }}
               />
+              <PasswordInput
+              label="Password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={e => setPassword(e.currentTarget.value)}
+                radius="md"
+                required
+                styles={{
+                  input: { color: '#fff', backgroundColor: 'rgba(255,255,255,0.08)' },
+                  label: { color: '#fff' }
+                }}/>
               <Button
                 size="md"
                 radius="md"

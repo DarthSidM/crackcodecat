@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import Razorpay from "razorpay"
 
-console.log("Razorpay Key ID:", process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID);
-console.log("Razorpay Key Secret:", process.env.NEXT_PUBLIC_RAZORPAY_KEY_SECRET);
+// console.log("Razorpay Key ID:", process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID);
+// console.log("Razorpay Key Secret:", process.env.NEXT_PUBLIC_RAZORPAY_KEY_SECRET);
 export const instance = new Razorpay({key_id : process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!, key_secret : process.env.NEXT_PUBLIC_RAZORPAY_KEY_SECRET!});
 
 
@@ -17,7 +17,7 @@ export async function POST(req : NextRequest){
         notes: { userId: userId || '', courseId: courseId || 'cat_full' }
     })  
 
-    console.log("order",order);
+    // console.log("order",order);
     return NextResponse.json(order)
     
 }
