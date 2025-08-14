@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -26,8 +26,9 @@ import {
   em
 } from '@mantine/core';
 import { AreaChart } from '@mantine/charts';
-import { IconUsers, IconCurrencyRupee, IconBook, IconChartLine, IconGrowth, IconSearch, IconFilter, IconDownload, IconCalendarTime, IconAlertTriangle, IconChecks, IconInbox } from '@tabler/icons-react';
+import { IconUsers, IconCurrencyRupee, IconBook, IconChartLine, IconGrowth, IconSearch, IconFilter, IconDownload, IconCalendarTime, IconAlertTriangle, IconChecks, IconInbox, IconPlayerPause, IconPlayerPlay, IconEdit, IconPlus } from '@tabler/icons-react';
 import { useMediaQuery } from '@mantine/hooks';
+import Link from 'next/link';
 
 // ------------------ Mock Data (would come from backend) ------------------ //
 interface CourseInfo { id: string; name: string; price: number; active: boolean; startDate: string; students: number; whatsappLink: string; };
@@ -79,7 +80,50 @@ export default function ManagerDashboard() {
   const [courseFilter, setCourseFilter] = useState<string | null>(null);
   const [view, setView] = useState<'students' | 'courses'>('students');
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
+  // --- New state for real courses and enrollments
+  const [dbCourses, setDbCourses] = useState<Array<{ _id: string; courseName: string; courseDescription: string; price: number; cgst: number; sgst: number; status: 'ACTIVE' | 'INACTIVE'; createdAt?: string; }>>([]);
+  const [enrollCounts, setEnrollCounts] = useState<Record<string, number>>({});
+  const [isLoadingCourses, setIsLoadingCourses] = useState<boolean>(false);
+  const [isToggling, setIsToggling] = useState<Record<string, boolean>>({});
   const isMobile = useMediaQuery(`(max-width: ${em(750)})`);
+
+  // Load courses and enrollment counts from APIs
+  useEffect(() => {
+    let isMounted = true;
+    async function load() {
+      try {
+        setIsLoadingCourses(true);
+        const [coursesRes, usersRes] = await Promise.all([
+          fetch('/api/manager/courses'),
+          fetch('/api/manager/users/with-courses')
+        ]);
+        if (!coursesRes.ok) throw new Error('Failed to load courses');
+        if (!usersRes.ok) throw new Error('Failed to load users');
+        const coursesJson = await coursesRes.json();
+        const usersJson = await usersRes.json();
+        if (!isMounted) return;
+        const courses = (coursesJson?.courses ?? []) as Array<any>;
+        setDbCourses(courses);
+        const counts: Record<string, number> = {};
+        const users = (usersJson?.users ?? []) as Array<any>;
+        for (const u of users) {
+          const regs = Array.isArray(u?.coursesRegistered) ? u.coursesRegistered : [];
+          for (const c of regs) {
+            const id = typeof c === 'string' ? c : c?._id;
+            if (!id) continue;
+            counts[id] = (counts[id] || 0) + 1;
+          }
+        }
+        setEnrollCounts(counts);
+      } catch (e) {
+        // ignore
+      } finally {
+        if (isMounted) setIsLoadingCourses(false);
+      }
+    }
+    load();
+    return () => { isMounted = false; };
+  }, []);
 
   const filteredStudents = useMemo(() => STUDENTS.filter(s => {
     const matches = `${s.name} ${s.email} ${s.phone}`.toLowerCase().includes(search.toLowerCase());
@@ -101,13 +145,14 @@ export default function ManagerDashboard() {
     }}>
       <Container size="xl">
         <Stack gap={36}>
-          {/* Header */}
+          {/* Header */
+            /* Keeping brand, colors and overall styling */}
           <Group justify="space-between" align="flex-end">
             <div>
               <Title order={1} size={46} fw={900} style={{ color: '#fff', letterSpacing: -1 }}>Manager Dashboard</Title>
               <Text size="sm" c="var(--mantine-color-gray-3)">Operational overview • revenue • cohorts • learner activity</Text>
             </div>
-            <SegmentedControl value={view} onChange={(v) => setView(v as any)} data={[{ label: 'Students', value: 'students' }, { label: 'Courses', value: 'courses' }]} radius="md" />
+            <div />
           </Group>
 
           {/* KPI Cards */}
@@ -137,7 +182,7 @@ export default function ManagerDashboard() {
             </Paper>
           </SimpleGrid>
 
-          {/* Revenue Chart */}
+          {/* Revenue Chart (kept as-is) */}
           <Paper withBorder radius="lg" p="xl" style={{ background: 'linear-gradient(150deg,rgba(255,255,255,0.07),rgba(255,255,255,0.015))', backdropFilter: 'blur(10px)' }}>
             <Group justify="space-between" mb="md">
               <div>
@@ -164,176 +209,31 @@ export default function ManagerDashboard() {
               yAxisProps={{ width: 60 }}
             />
           </Paper>
-
-          {/* Conditional Main View */}
-          {view === 'students' && (
-            <Paper withBorder radius="lg" p="xl" style={{ background: 'linear-gradient(150deg,rgba(255,255,255,0.07),rgba(255,255,255,0.015))', backdropFilter: 'blur(10px)' }}>
-              <Group mb="md" gap="sm" align="flex-end" wrap="wrap">
-                <TextInput
-                  placeholder="Search name / email / phone"
-                  value={search}
-                  onChange={(e) => setSearch(e.currentTarget.value)}
-                  leftSection={<IconSearch size={16} />}
-                  radius="md"
-                  w={{ base: '100%', sm: 300 }}
-                />
-                <Select
-                  placeholder="Filter course"
-                  data={[{ value: 'all', label: 'All Courses' }, ...COURSES.map(c => ({ value: c.id, label: c.name }))]}
-                  value={courseFilter || 'all'}
-                  onChange={(v) => setCourseFilter(v === 'all' ? null : v)}
-                  radius="md"
-                  leftSection={<IconFilter size={16} />}
-                  w={{ base: '100%', sm: 240 }}
-                />
-                <Button leftSection={<IconDownload size={16} />} variant="gradient" gradient={{ from: '#0066FF', to: '#003366' }} radius="md" w={{ base: '100%', sm: 'auto' }}>Export</Button>
-              </Group>
-
-              {isMobile ? (
-                <Stack gap="sm">
-                  {filteredStudents.map((s) => {
-                    const course = COURSES.find(c => c.id === s.courseId)!;
-                    return (
-                      <Paper key={s.id} withBorder radius="md" p="md" style={{ background: 'linear-gradient(150deg,rgba(255,255,255,0.06),rgba(255,255,255,0.015))' }}>
-                        <Group justify="space-between" align="flex-start">
-                          <Group gap={6}>
-                            <Indicator color={statusColor[s.status]} size={10} />
-                            <Text fw={600} style={{ color: '#fff' }}>{s.name}</Text>
-                          </Group>
-                          <Badge size="sm" color={statusColor[s.status]} variant="light" radius="sm">{s.status}</Badge>
-                        </Group>
-                        <Stack gap={2} mt={8}>
-                          <Text size="xs" c="var(--mantine-color-gray-3)">{s.email}</Text>
-                          <Text size="xs" c="var(--mantine-color-gray-3)">{s.phone}</Text>
-                          <Text size="xs" c="var(--mantine-color-gray-4)">Course: {course.name}</Text>
-                          <Text size="xs" c="var(--mantine-color-gray-4)">Enrolled: {s.enrolledOn}</Text>
-                        </Stack>
-                      </Paper>
-                    );
-                  })}
-                </Stack>
-              ) : (
-                <ScrollArea h={360} offsetScrollbars>
-                  <Table highlightOnHover withRowBorders={false} verticalSpacing="xs" fz="sm" className="dashboard-table">
-                    <Table.Thead>
-                      <Table.Tr>
-                        <Table.Th style={{ color: '#fff' }}>Name</Table.Th>
-                        <Table.Th style={{ color: '#fff' }}>Email</Table.Th>
-                        <Table.Th style={{ color: '#fff' }}>Phone</Table.Th>
-                        <Table.Th style={{ color: '#fff' }}>Course</Table.Th>
-                        <Table.Th style={{ color: '#fff' }}>Status</Table.Th>
-                        <Table.Th style={{ color: '#fff' }}>Enrolled</Table.Th>
-                      </Table.Tr>
-                    </Table.Thead>
-                    <Table.Tbody>
-                      {filteredStudents.map(s => {
-                        const course = COURSES.find(c => c.id === s.courseId)!;
-                        return (
-                          <Table.Tr key={s.id}>
-                            <Table.Td>
-                              <Group gap={6}>
-                                <Indicator color={statusColor[s.status]} size={10} />
-                                <Text fw={600} style={{ color: '#fff' }}>{s.name}</Text>
-                              </Group>
-                            </Table.Td>
-                            <Table.Td><Text c="var(--mantine-color-gray-3)" lineClamp={1}>{s.email}</Text></Table.Td>
-                            <Table.Td><Text c="var(--mantine-color-gray-3)">{s.phone}</Text></Table.Td>
-                            <Table.Td><Text size="xs" c="var(--mantine-color-gray-3)">{course.name}</Text></Table.Td>
-                            <Table.Td><Badge size="sm" color={statusColor[s.status]} variant="light" radius="sm">{s.status}</Badge></Table.Td>
-                            <Table.Td><Text size="xs" c="var(--mantine-color-gray-4)">{s.enrolledOn}</Text></Table.Td>
-                          </Table.Tr>
-                        );
-                      })}
-                    </Table.Tbody>
-                  </Table>
-                </ScrollArea>
-              )}
-            </Paper>
-          )}
-
-          {view === 'courses' && (
-            <Paper withBorder radius="lg" p="xl" style={{ background: 'linear-gradient(150deg,rgba(255,255,255,0.07),rgba(255,255,255,0.015))', backdropFilter: 'blur(10px)' }}>
-              <Group justify="space-between" mb="md">
-                <Title order={3} size={24} style={{ color: '#fff' }}>Course Performance</Title>
-                {selectedCourse && (
-                  <Button size="xs" variant="subtle" color="gray" onClick={() => setSelectedCourse(null)}>Back</Button>
-                )}
-              </Group>
-              {!selectedCourse && (
-                <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing={24}>
-                  {COURSES.map(c => (
-                    <Paper key={c.id} withBorder radius="md" p="lg" style={{ background: 'linear-gradient(150deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))' }}>
-                      <Stack gap={6}>
-                        <Group justify="space-between" align="flex-start">
-                          <Text fw={600} style={{ color: '#fff' }}>{c.name}</Text>
-                          {c.active ? <Badge color="green" variant="light">Active</Badge> : <Badge color="gray" variant="light">Inactive</Badge>}
-                        </Group>
-                        <Text size="xs" c="var(--mantine-color-gray-4)">Students: {c.students}</Text>
-                        <Text size="xs" c="var(--mantine-color-gray-4)">Gross: {formatINR(c.students * c.price)}</Text>
-                        <Text size="xs" c="var(--mantine-color-gray-4)">Start: {c.startDate}</Text>
-                        <Button mt="xs" size="xs" variant="gradient" gradient={{ from: '#0066FF', to: '#003366' }} onClick={() => setSelectedCourse(c.id)}>View Cohort</Button>
-                      </Stack>
-                    </Paper>
-                  ))}
-                </SimpleGrid>
-              )}
-              {selectedCourse && (
-                isMobile ? (
-                  <Stack gap="sm">
-                    {STUDENTS.filter(s => s.courseId === selectedCourse).map((s) => (
-                      <Paper key={s.id} withBorder radius="md" p="md" style={{ background: 'linear-gradient(150deg,rgba(255,255,255,0.06),rgba(255,255,255,0.015))' }}>
-                        <Group justify="space-between" align="flex-start">
-                          <Group gap={6}>
-                            <Indicator color={statusColor[s.status]} size={10} />
-                            <Text fw={600} style={{ color: '#fff' }}>{s.name}</Text>
-                          </Group>
-                          <Badge size="sm" color={statusColor[s.status]} variant="light" radius="sm">{s.status}</Badge>
-                        </Group>
-                        <Stack gap={2} mt={8}>
-                          <Text size="xs" c="var(--mantine-color-gray-3)">{s.email}</Text>
-                          <Text size="xs" c="var(--mantine-color-gray-3)">{s.phone}</Text>
-                          <Text size="xs" c="var(--mantine-color-gray-4)">Enrolled: {s.enrolledOn}</Text>
-                        </Stack>
-                      </Paper>
-                    ))}
-                  </Stack>
-                ) : (
-                  <Box>
-                    <Title order={4} size={18} mb="sm" style={{ color: '#fff' }}>Cohort Students</Title>
-                    <ScrollArea h={360} offsetScrollbars>
-                      <Table highlightOnHover withRowBorders={false} verticalSpacing="xs" fz="sm" className="dashboard-table">
-                        <Table.Thead>
-                          <Table.Tr>
-                            <Table.Th style={{ color: '#fff' }}>Name</Table.Th>
-                            <Table.Th style={{ color: '#fff' }}>Email</Table.Th>
-                            <Table.Th style={{ color: '#fff' }}>Phone</Table.Th>
-                            <Table.Th style={{ color: '#fff' }}>Status</Table.Th>
-                            <Table.Th style={{ color: '#fff' }}>Enrolled</Table.Th>
-                          </Table.Tr>
-                        </Table.Thead>
-                        <Table.Tbody>
-                          {STUDENTS.filter(s => s.courseId === selectedCourse).map(s => (
-                            <Table.Tr key={s.id}>
-                              <Table.Td>
-                                <Group gap={6}>
-                                  <Indicator color={statusColor[s.status]} size={10} />
-                                  <Text fw={600} style={{ color: '#fff' }}>{s.name}</Text>
-                                </Group>
-                              </Table.Td>
-                              <Table.Td><Text c="var(--mantine-color-gray-3)" lineClamp={1}>{s.email}</Text></Table.Td>
-                              <Table.Td><Text c="var(--mantine-color-gray-3)">{s.phone}</Text></Table.Td>
-                              <Table.Td><Badge size="sm" color={statusColor[s.status]} variant="light" radius="sm">{s.status}</Badge></Table.Td>
-                              <Table.Td><Text size="xs" c="var(--mantine-color-gray-4)">{s.enrolledOn}</Text></Table.Td>
-                            </Table.Tr>
-                          ))}
-                        </Table.Tbody>
-                      </Table>
-                    </ScrollArea>
-                  </Box>
-                )
-              )}
-            </Paper>
-          )}
+          {/* All Courses (new section) */}
+          <AllCoursesSection
+            isMobile={isMobile}
+            isLoadingCourses={isLoadingCourses}
+            dbCourses={dbCourses}
+            enrollCounts={enrollCounts}
+            onToggleStatus={async (courseId, toStatus) => {
+              setIsToggling((prev) => ({ ...prev, [courseId]: true }));
+              try {
+                const res = await fetch('/api/manager/courses', {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ id: courseId, status: toStatus })
+                });
+                if (!res.ok) throw new Error('Failed to update');
+                const json = await res.json();
+                const updated = json.course;
+                setDbCourses((prev) => prev.map((c) => (c._id === courseId ? { ...c, status: updated.status } : c)));
+              } catch (e) {
+                // noop toast for brevity
+              } finally {
+                setIsToggling((prev) => ({ ...prev, [courseId]: false }));
+              }
+            }}
+          />
         </Stack>
       </Container>
       <style jsx global>{`
@@ -345,3 +245,114 @@ export default function ManagerDashboard() {
 }
 
 /* Removed global style override for table rows */
+
+// ------------------ AllCoursesSection ------------------ //
+type AllCoursesSectionProps = {
+  isMobile: boolean;
+  isLoadingCourses: boolean;
+  dbCourses: Array<{ _id: string; courseName: string; courseDescription: string; price: number; cgst: number; sgst: number; status: 'ACTIVE' | 'INACTIVE'; createdAt?: string; }>;
+  enrollCounts: Record<string, number>;
+  onToggleStatus: (courseId: string, toStatus: 'ACTIVE' | 'INACTIVE') => Promise<void>;
+};
+
+function formatDate(dateIso?: string) {
+  if (!dateIso) return '—';
+  try {
+    const d = new Date(dateIso);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
+  } catch {
+    return '—';
+  }
+}
+
+function AllCoursesSection(props: AllCoursesSectionProps) {
+  const { isMobile, isLoadingCourses, dbCourses, enrollCounts, onToggleStatus } = props;
+  return (
+    <Paper withBorder radius="lg" p="xl" style={{ background: 'linear-gradient(150deg,rgba(255,255,255,0.07),rgba(255,255,255,0.015))', backdropFilter: 'blur(10px)' }}>
+      <Group justify="space-between" mb="md">
+        <Title order={3} size={24} style={{ color: '#fff' }}>All Courses</Title>
+        <Button
+          component={Link as any}
+          href="/manager/courses/new"
+          leftSection={<IconPlus size={16} />}
+          variant="gradient"
+          gradient={{ from: '#0066FF', to: '#003366' }}
+          radius="md"
+        >
+          Add Course
+        </Button>
+      </Group>
+      <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing={24}>
+        {isLoadingCourses && Array.from({ length: 3 }).map((_, i) => (
+          <Paper key={i} withBorder radius="md" p="lg" style={{ background: 'linear-gradient(150deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))', minHeight: 150 }}>
+            <Stack gap="xs">
+              <Badge variant="light" color="gray">Loading…</Badge>
+              <Text size="xs" c="var(--mantine-color-gray-4)">Fetching course</Text>
+            </Stack>
+          </Paper>
+        ))}
+        {!isLoadingCourses && dbCourses.length === 0 && (
+          <Paper withBorder radius="md" p="lg" style={{ background: 'linear-gradient(150deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))' }}>
+            <Text size="sm" c="var(--mantine-color-gray-3)">No courses yet. Click "Add Course" to create one.</Text>
+          </Paper>
+        )}
+        {dbCourses.map((c) => {
+          const enrolled = enrollCounts[c._id] || 0;
+          const isActive = c.status === 'ACTIVE';
+          return (
+            <Paper key={c._id} withBorder radius="md" p="lg" style={{ background: 'linear-gradient(150deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))' }}>
+              <Stack gap={8}>
+                <Group justify="space-between" align="flex-start">
+                  <Text fw={600} style={{ color: '#fff' }}>{c.courseName}</Text>
+                  {isActive ? <Badge color="green" variant="light">Active</Badge> : <Badge color="gray" variant="light">Inactive</Badge>}
+                </Group>
+                <Text size="xs" c="var(--mantine-color-gray-4)">Price: {formatINR(c.price)}</Text>
+                <Text size="xs" c="var(--mantine-color-gray-4)">Start: {formatDate(c.createdAt)}</Text>
+                <Text size="xs" c="var(--mantine-color-gray-4)">
+                  Students: <Link href={`/manager/courses/${c._id}/students`} style={{ color: 'var(--mantine-color-blue-3)', textDecoration: 'underline' }}>{enrolled}</Link>
+                </Text>
+                <Group gap="xs" mt="xs">
+                  <Button
+                    component={Link as any}
+                    href={`/manager/courses/${c._id}/edit`}
+                    leftSection={<IconEdit size={16} />}
+                    variant="gradient"
+                    gradient={{ from: '#0066FF', to: '#003366' }}
+                    size="xs"
+                  >
+                    Edit
+                  </Button>
+                  {isActive ? (
+                    <Button
+                      leftSection={<IconPlayerPause size={16} />}
+                      variant="light"
+                      color="red"
+                      size="xs"
+                      onClick={() => {
+                        const ok = typeof window !== 'undefined' ? window.confirm(`Pause enrollments for "${c.courseName}"?`) : true;
+                        if (ok) onToggleStatus(c._id, 'INACTIVE');
+                      }}
+                    >
+                      Stop
+                    </Button>
+                  ) : (
+                    <Button
+                      leftSection={<IconPlayerPlay size={16} />}
+                      variant="light"
+                      color="green"
+                      size="xs"
+                      onClick={() => onToggleStatus(c._id, 'ACTIVE')}
+                    >
+                      Resume
+                    </Button>
+                  )}
+                </Group>
+              </Stack>
+            </Paper>
+          );
+        })}
+      </SimpleGrid>
+    </Paper>
+  );
+}

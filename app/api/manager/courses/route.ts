@@ -6,16 +6,16 @@ import { connect } from "@/lib/db";
 export async function POST(req: NextRequest) {
   try {
     await connect();
-    const { courseName, courseDescription, price } = await req.json();
+    const { courseName, courseDescription, price , cgst, sgst} = await req.json();
 
-    if (!courseName || !courseDescription || typeof price !== "number") {
+    if (!courseName || !courseDescription || typeof price !== "number" || typeof sgst !== "number" ) {
       return NextResponse.json(
         { message: "All fields are required.", success: false },
         { status: 400 }
       );
     }
 
-    const course = await Course.create({ courseName, courseDescription, price });
+    const course = await Course.create({ courseName, courseDescription, price, cgst, sgst });
 
     return NextResponse.json(
       { message: "Course created successfully.", success: true, course },
@@ -43,11 +43,12 @@ export async function GET() {
   }
 }
 
+
 // UPDATE a course
 export async function PUT(req: NextRequest) {
   try {
     await connect();
-    const { id, courseName, courseDescription, price } = await req.json();
+    const { id, courseName, courseDescription, price, cgst, sgst, status } = await req.json();
 
     if (!id) {
       return NextResponse.json(
@@ -56,9 +57,17 @@ export async function PUT(req: NextRequest) {
       );
     }
 
+    const updatePayload: Record<string, any> = { };
+    if (typeof courseName !== 'undefined') updatePayload.courseName = courseName;
+    if (typeof courseDescription !== 'undefined') updatePayload.courseDescription = courseDescription;
+    if (typeof price !== 'undefined') updatePayload.price = price;
+    if (typeof cgst !== 'undefined') updatePayload.cgst = cgst;
+    if (typeof sgst !== 'undefined') updatePayload.sgst = sgst;
+    if (typeof status !== 'undefined') updatePayload.status = status;
+
     const updated = await Course.findByIdAndUpdate(
       id,
-      { courseName, courseDescription, price },
+      updatePayload,
       { new: true }
     );
 
